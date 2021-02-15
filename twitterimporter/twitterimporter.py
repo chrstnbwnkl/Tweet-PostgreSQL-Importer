@@ -48,8 +48,11 @@ class Tweet:
         if "extended_tweet" in kwargs.keys():
             setattr(self, "text", kwargs["extended_tweet"]["full_text"])
 
-        else:
+        elif "text" in kwargs.keys():
             setattr(self, "text", kwargs["text"])
+
+        elif "full_text" in kwargs.keys():
+            setattr(self, "text", kwargs["full_text"])
 
         if kwargs["coordinates"] is not None:
             for idx, coord in enumerate(["lon", "lat"]):
@@ -58,9 +61,12 @@ class Tweet:
             for coord in ["lon", "lat"]:
                 setattr(self, coord, None)
 
-        if "place" in kwargs.keys():
+        if "place" in kwargs.keys() and kwargs["place"] is not None:
             for p in ["full_name", "id"]:
                 setattr(self, f"place_{p}", kwargs["place"][p])
+        else:
+            for p in ["full_name", "id"]:
+                setattr(self, f"place_{p}", None)
 
     def _to_datetime(self, dtime):
         new_datetime = datetime.strptime(dtime, "%a %b %d %H:%M:%S +0000 %Y")
