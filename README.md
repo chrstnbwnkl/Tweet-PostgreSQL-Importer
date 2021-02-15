@@ -1,1 +1,1 @@
-# A Python package for importing Twitter data into PostgreSQL
+# Importing Twitter data from text files and API streams into Postgres.
