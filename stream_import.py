@@ -1,6 +1,7 @@
 import psycopg2 as db
 from dotenv import dotenv_values
 import tweepy
+from tweepy.error import TweepError
 
 from twitterimporter.twitterimporter import Tweet, TwitterImporter
 
@@ -45,11 +46,15 @@ def main(debug=True):
         tweets = tweepy.Cursor(
             api.user_timeline, id=user_id, tweet_mode="extended"
         ).items()
-
-        for t in tweets:
-            if "user" in t._json and t._json["place"] is not None:
-                tweet = Tweet(**t._json)
-                importer.import_tweet(tweet=tweet, table_name=table_name)
+        try:
+            for t in tweets:
+                if "user" in t._json and t._json["place"] is not None:
+                    tweet = Tweet(**t._json)
+                    importer.import_tweet(tweet=tweet, table_name=table_name)
+        except TweepError as e:
+            print(f"Something happened while parsing user {user_id}. Error: {e}")
+            auth = tweepy.AppAuthHandler(env["api_key"], env["api_secret"])
+            api = tweepy.API(auth)
 
 
 if __name__ == "__main__":

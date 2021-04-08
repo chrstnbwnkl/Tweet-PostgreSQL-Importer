@@ -15,17 +15,9 @@ class TwitterImporter:
     def conn(self, value):
         self._conn = value
 
-    @property
-    def mode(self):
-        return self._mode
-
-    @mode.setter
-    def mode(self, value):
-        self._mode = value
-
     def import_tweet(self, tweet, table_name):
         query_template = sql.SQL(
-            "INSERT INTO {} VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, ST_SetSRID(ST_MakePoint(%s, %s),4326), %s, %s) ON CONFLICT DO NOTHING"
+            "INSERT INTO {} VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, ST_SetSRID(ST_MakePoint(%s, %s),4326), %s, %s, %s, ST_SetSRID(ST_MakePoint(%s, %s),4326)) ON CONFLICT DO NOTHING"
         ).format(sql.Identifier(table_name))
         query = self._cur.mogrify(query_template, tweet.to_tuple())
         self._cur.execute(query)
@@ -62,11 +54,27 @@ class Tweet:
                 setattr(self, coord, None)
 
         if "place" in kwargs.keys() and kwargs["place"] is not None:
-            for p in ["full_name", "id"]:
-                setattr(self, f"place_{p}", kwargs["place"][p])
+            for p in ["full_name", "id", "place_type"]:
+                if p != "place_type":
+                    setattr(self, f"place_{p}", kwargs["place"][p])
+                else:
+                    setattr(self, p, kwargs["place"][p])
+            if kwargs["place"]["place_type"] == "poi":
+                for idx, coord in enumerate(["place_lon", "place_lat"]):
+                    setattr(
+                        self,
+                        coord,
+                        kwargs["place"]["bounding_box"]["coordinates"][0][0][idx],
+                    )
+            else:
+                for idx, coord in enumerate(["place_lon", "place_lat"]):
+                    setattr(self, coord, None)
         else:
-            for p in ["full_name", "id"]:
-                setattr(self, f"place_{p}", None)
+            for p in ["full_name", "id", "place_type", "place_lon", "place_lat"]:
+                if p not in ["place_type", "place_lon", "place_lat"]:
+                    setattr(self, f"place_{p}", None)
+                else:
+                    setattr(self, p, None)
 
     def _to_datetime(self, dtime):
         new_datetime = datetime.strptime(dtime, "%a %b %d %H:%M:%S +0000 %Y")
